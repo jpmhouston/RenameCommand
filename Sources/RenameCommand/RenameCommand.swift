@@ -20,7 +20,7 @@ public struct RenameOptions: ParsableArguments {
     @Flag(name: .shortAndLong, help: "Verbose output (overrides \"--silent\").")
     public var verbose: Bool
     
-    @Flag(name: [.long, .customLong("dry-run")], help: "Don't perform rename just output the result.")
+    @Flag(name: .customLong("dry-run"), help: "Don't perform rename just output the result.")
     public var dryRun: Bool
     
     public init() { } // swift complains if this not present
