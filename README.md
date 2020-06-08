@@ -6,11 +6,11 @@ It exports a struct `RenameOptions` conforming to the `ParsableArguments` protoc
 
  `runRename()` takes a function argument with a inout `name` parameter, you provide this function which changes `name` as desired. This is called for every file passed on the command line, with the file extension omitted if any, and the file gets renamed accordingly.
 
-`RenameOptions`  defines arguments `verbose`, `silent`, `dry-run`.
+`RenameOptions`  defines arguments `verbose`, `quiet`, `dry-run`.
 
-It works well with `swift-sh`, also the `Regex` package at http://github.com/sharplet/Regex which it extends with a convenience function for case insensitive matching.
+It works well with `swift-sh`, also the `Regex` package at http://github.com/sharplet/Regex which `RenameCommand` extends with an overload of its `replace` functions added to `String` allowing you to more conveniently specify case insensitive.
 
-For example:
+For example, this simple Swift "script" source file "myrename" (no ".swift" extension needed):
 
 ```swift
 #!/usr/bin/swift sh
@@ -25,8 +25,8 @@ struct RenameMoviesCommand: ParsableCommand {
     func run() throws {
         try options.runRename() { name in
             name.replaceAll(matching: #"\."#, with: " ")
-            name.replaceFirst(matchingIgnoringCase: " 720p", with: "")
-            name.replaceFirst(matchingIgnoringCase: " 1080p", with: "")
+            name.replaceFirst(matching: " 720p", .ignoreCase, with: "")
+            name.replaceFirst(matching: " 1080p", .ignoreCase, with: "")
             name.replaceFirst(matching: " ([0-9][0-9][0-9][0-9])$", with: " ($1)")
         }
     }
@@ -34,3 +34,32 @@ struct RenameMoviesCommand: ParsableCommand {
 
 RenameMoviesCommand.main()
 ```
+
+after `chmod a+x myrename` and moving it to somewhere in the shell command path like `/usr/local/bin`, can then do:
+
+```bash
+$ myrename --help
+OVERVIEW: Renames my ripped movies from their old name format to how I prefer them now.
+
+USAGE: myrename [<files> ...] [--quiet] [--verbose] [--dry-run]
+
+ARGUMENTS:
+  <files>                 Files to rename. 
+
+OPTIONS:
+  -q, --quiet             Suppress non-error output. 
+  -v, --verbose           Verbose output (overrides "--quiet"). 
+  --dry-run               Show what would be renamed (no files are changed).
+  -h, --help              Show help information.
+
+$ myrename ~/Movies/Die.Hard.1988.720p.mp4
+'Die.Hard.1988.720p.mp4' renamed to 'Die Hard (1988).mp4'
+```
+
+## See Also
+
+- [ArgumentParser](https://github.com/apple/swift-argument-parser)
+- [swift-sh](https://github.com/mxcl/swift-sh)
+- [Regex](http://github.com/sharplet/Regex)
+- [Files](https://github.com/JohnSundell/Files)
+
