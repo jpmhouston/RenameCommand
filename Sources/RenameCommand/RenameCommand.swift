@@ -14,13 +14,13 @@ public struct RenameOptions: ParsableArguments {
     @Argument(help: "Files to rename.")
     public var files: [String]
     
-    @Flag(name: .shortAndLong, help: "Silent output.")
-    public var silent: Bool
+    @Flag(name: .shortAndLong, help: "Suppress non-error output.")
+    public var quiet: Bool
     
-    @Flag(name: .shortAndLong, help: "Verbose output (overrides \"--silent\").")
+    @Flag(name: .shortAndLong, help: "Verbose output (overrides \"--quiet\").")
     public var verbose: Bool
     
-    @Flag(name: .customLong("dry-run"), help: "Don't perform rename just output the result.")
+    @Flag(name: .customLong("dry-run"), help: "Show what would be renamed (no files are changed).")
     public var dryRun: Bool
     
     public init() { } // swift complains if this not present
@@ -57,11 +57,11 @@ public struct RenameOptions: ParsableArguments {
                 }
                 
                 if verbose { print("\(String(repeating: " ", count: "\(i)".count))  renamed to \(replacementName)") }
-                else if !silent { print("'\(fileName)' renamed to '\(replacementName)'") }
+                else if !quiet { print("'\(fileName)' renamed to '\(replacementName)'") }
                 nrenamed += 1
             } else {
                 if verbose { print("\(String(repeating: " ", count: "\(i)".count))  not renamed") }
-                else if !silent && dryRun { print("'\(fileName)' not renamed") }
+                else if !quiet && dryRun { print("'\(fileName)' not renamed") }
             }
         }
         return nrenamed
