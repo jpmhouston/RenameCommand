@@ -68,20 +68,25 @@ public struct RenameOptions: ParsableArguments {
     }
 }
 
-// add conveniences to Regex/String+ReplaceMatching.swift
+// add conveniences to Regex/String+ReplaceMatching.swift: pass in regex options like .ignoreCase easily
+//
+// note: due to Swift bug SR-5304 am unable to refer to type `Regex.Options` below as would be preferable.
+// instead must use inappropriately generic `Options` which could easily collide with a definition from
+// another import. filed bug against github.com/sharplet/Regex to add a public `RegexOptions` typealias.
+
 extension String {
-   public mutating func replaceFirst(matchingIgnoringCase pattern: StaticString, with template: String) {
-       replaceFirst(matching: Regex(pattern, options: [.ignoreCase]), with: template)
+   public mutating func replaceFirst(matching pattern: StaticString, _ options: Options, with template: String) {
+       replaceFirst(matching: Regex(pattern, options: options), with: template)
    }
-   public mutating func replaceAll(matchingIgnoringCase pattern: StaticString, with template: String) {
-       replaceAll(matching: Regex(pattern, options: [.ignoreCase]), with: template)
+   public mutating func replaceAll(matching pattern: StaticString, _ options: Options, with template: String) {
+       replaceAll(matching: Regex(pattern, options: options), with: template)
    }
    
    // for completeness, however not expected to be used by users of RenameCommand
-   public func replacingFirst(matchingIgnoringCase pattern: StaticString, with template: String) -> String {
-       return replacingFirst(matching: Regex(pattern, options: [.ignoreCase]), with: template)
+   public func replacingFirst(matching pattern: StaticString, _ options: Options, with template: String) -> String {
+       return replacingFirst(matching: Regex(pattern, options: options), with: template)
    }
-   public func replacingAll(matchingIgnoringCase pattern: StaticString, with template: String) -> String {
-       return replacingAll(matching: Regex(pattern, options: [.ignoreCase]), with: template)
+   public func replacingAll(matching pattern: StaticString, _ options: Options, with template: String) -> String {
+       return replacingAll(matching: Regex(pattern, options: options), with: template)
    }
 }
