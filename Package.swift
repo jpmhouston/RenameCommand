@@ -5,6 +5,7 @@ import PackageDescription
 
 let package = Package(
     name: "RenameCommand",
+    platforms: [.macOS(.v10_10)],
     products: [
         // Products define the executables and libraries produced by a package, and make them visible to other packages.
         .library(
@@ -27,5 +28,6 @@ let package = Package(
             	.product(name: "Files", package: "Files"),
             	.product(name: "Regex", package: "Regex"),
             ]),
-    ]
+    ],
+    swiftLanguageVersions: [.v5]
 )
