@@ -2,6 +2,8 @@
 
 A library making it easy to make a swift command-line program for renaming files according to your own rules.
 
+#### Details
+
 It exports a struct `RenameOptions` conforming to the `ParsableArguments` protocol from Apple's `ArgumentParser`. It can be used with `@OptionGroup()` and your own `ParsableCommand` and also provides a `runRename()` function you can call within your own `run()`, doing most of the work needed.
 
  `runRename()` takes a function argument with a inout `name` parameter, you provide this function which changes `name` as desired. This is called for every file passed on the command line, with the file extension omitted if any, and the file gets renamed accordingly.
@@ -10,7 +12,9 @@ It exports a struct `RenameOptions` conforming to the `ParsableArguments` protoc
 
 It works well with `swift-sh`, also the `Regex` package at http://github.com/sharplet/Regex which `RenameCommand` extends with an overload of its `replace` functions added to `String` allowing you to more conveniently specify case insensitive.
 
-For example, this simple Swift "script" source file "myrename" (no ".swift" extension needed):
+#### Example
+
+This simple Swift "script" source file "myrename" (no ".swift" extension needed):
 
 ```swift
 #!/usr/bin/swift sh
@@ -55,6 +59,16 @@ OPTIONS:
 $ myrename ~/Movies/Die.Hard.1988.720p.mp4
 'Die.Hard.1988.720p.mp4' renamed to 'Die Hard (1988).mp4'
 ```
+
+#### Tip for fish shell users
+
+If you use the [fish shell](https://fishshell.com/), add this [selection function](https://gist.github.com/jpmhouston/4e23e60767055f98fccfee956eef9eda) and you can rename the current Finder selection with simply this:
+
+```bash
+$ myrename (selection)
+```
+
+(exercise for the reader: make something similar work in other shells)
 
 ## See Also
 
