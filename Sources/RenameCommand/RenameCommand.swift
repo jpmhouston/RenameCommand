@@ -45,10 +45,29 @@ public struct RenameOptions: ParsableArguments {
     @Flag(name: .customLong("dry-run"), help: "Show what would be renamed (no files are changed).")
     public var dryRun: Bool
     
+    @Option(name: .customLong("try"), help: "Try hypothetical file name (file parameters ignored, no files are changed).")
+    public var tryPattern: String?
+    
     public init() { } // swift complains if this not present
     
     @discardableResult
     public func runRename(_ renameFunc: (_ name: inout String) -> Void) throws -> Int {
+        if let tryPattern = tryPattern {
+            guard !tryPattern.isEmpty else {
+                return 1
+            }
+            
+            var (baseName, fileExtn) = separateExtension(tryPattern)
+            reportBefore(index: 1, path: "\(tryPattern)")
+            
+            renameFunc(&baseName)
+            
+            let replacementName = fileExtn != nil ? "\(baseName).\(fileExtn!)" : baseName
+            reportAfter(index: 1, original: tryPattern, replacement: replacementName)
+            
+            return 0
+        }
+        
         var i = 0, nrenamed = 0
         for path in files {
             i += 1
@@ -58,35 +77,54 @@ public struct RenameOptions: ParsableArguments {
                 throw Files.LocationError(path: path, reason: .cannotRenameRoot)
             }
             let fileName = file.name
-            
-            if verbose { print("\(i). \(parent.path)\(fileName)") }
-            
-            var baseName = fileName
-            var fileExtn: String? = nil
-            let components = fileName.split(separator: ".")
-            if let ext = components.last {
-                fileExtn = String(ext)
-                baseName = components.dropLast().joined(separator: ".")
-            }
+            var (baseName, fileExtn) = separateExtension(fileName)
+            reportBefore(index: i, path: "\(parent.path)\(fileName)")
             
             renameFunc(&baseName)
             
             let replacementName = fileExtn != nil ? "\(baseName).\(fileExtn!)" : baseName
-            
             if replacementName != fileName {
                 if !dryRun {
                     try file.rename(to: replacementName)
                 }
-                
-                if verbose { print("\(String(repeating: " ", count: "\(i)".count))  renamed to \(replacementName)") }
-                else if !quiet { print("'\(fileName)' renamed to '\(replacementName)'") }
                 nrenamed += 1
-            } else {
-                if verbose { print("\(String(repeating: " ", count: "\(i)".count))  not renamed") }
-                else if !quiet && dryRun { print("'\(fileName)' not renamed") }
             }
+            reportAfter(index: i, original: fileName, replacement: replacementName)
         }
         return nrenamed
+    }
+    
+    func reportBefore(index i: Int, path: String) {
+        if verbose {
+            print("\(i). \(path)")
+        }
+    }
+    
+    func reportAfter(index i: Int, original: String, replacement: String) {
+        if replacement != original {
+            if verbose {
+                print("\(String(repeating: " ", count: "\(i)".count))  renamed to \(replacement)")
+            } else if !quiet {
+                print("'\(original)' renamed to '\(replacement)'")
+            }
+        } else {
+            if verbose {
+                print("\(String(repeating: " ", count: "\(i)".count))  not renamed")
+            } else if !quiet && dryRun {
+                print("'\(original)' not renamed")
+            }
+        }
+    }
+    
+    func separateExtension(_ name: String) -> (base: String, extn: String?) {
+        var base = name
+        var extn: String? = nil
+        let components = name.split(separator: ".")
+        if let ext = components.last {
+            extn = String(ext)
+            base = components.dropLast().joined(separator: ".")
+        }
+        return (base, extn)
     }
 }
 
