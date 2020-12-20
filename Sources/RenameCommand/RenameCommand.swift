@@ -32,63 +32,60 @@ import ArgumentParser
 import Files
 import Regex
 
+public typealias RenameFunc = (_ name: inout String, _ extn: String) throws -> Void
+
 public struct RenameOptions: ParsableArguments {
-    @Argument(help: "Files to rename.")
+    @Argument(help: "Files to rename.", completion: .file())
     public var files: [String]
     
     @Flag(name: .shortAndLong, help: "Suppress non-error output.")
-    public var quiet: Bool
+    public var quiet: Bool = false
     
     @Flag(name: .shortAndLong, help: "Verbose output (overrides \"--quiet\").")
-    public var verbose: Bool
+    public var verbose: Bool = false
     
-    @Flag(name: .customLong("dry-run"), help: "Show what would be renamed (no files are changed).")
-    public var dryRun: Bool
+    @Flag(name: .customLong("dry-run"), help: "Show what would be renamed (overrides \"--quiet\", no files are changed).")
+    public var dryRun: Bool = false
     
-    @Option(name: .customLong("try"), help: "Try hypothetical file name (file parameters ignored, no files are changed).")
-    public var tryPattern: String?
+    @Flag(name: .customLong("try"), help: "Try hypothetical file names (overrides \"--quiet\", no files are changed).")
+    public var `tryOut`: Bool = false
     
     public init() { } // swift complains if this not present
     
     @discardableResult
-    public func runRename(_ renameFunc: (_ name: inout String) -> Void) throws -> Int {
-        if let tryPattern = tryPattern {
-            guard !tryPattern.isEmpty else {
-                return 1
-            }
-            
-            var (baseName, fileExtn) = separateExtension(tryPattern)
-            reportBefore(index: 1, path: "\(tryPattern)")
-            
-            renameFunc(&baseName)
-            
-            let replacementName = fileExtn != nil ? "\(baseName).\(fileExtn!)" : baseName
-            reportAfter(index: 1, original: tryPattern, replacement: replacementName)
-            
-            return 0
-        }
-        
+    public func runRename(_ renameFunc: RenameFunc) throws -> Int {
         var i = 0, nrenamed = 0
         for path in files {
+            let (_, fileName) = separateFile(path)
+            if fileName.isEmpty { // disregard empty argument strings
+                continue 
+            }
             i += 1
             
-            let file = try File(path: path)
-            guard let parent = file.parent else {
-                throw Files.LocationError(path: path, reason: .cannotRenameRoot)
+            let file: File?
+            if tryOut {
+                file = nil
+            } else {
+                file = try File(path: path)
+                if file!.parent == nil {
+                    throw Files.LocationError(path: path, reason: .cannotRenameRoot)
+                }
             }
-            let fileName = file.name
-            var (baseName, fileExtn) = separateExtension(fileName)
-            reportBefore(index: i, path: "\(parent.path)\(fileName)")
+
+            reportBefore(index: i, path: path)
+
+            let (fileBase, fileExtn) = separateExtension(fileName)
+            var newBase = fileBase
+            try renameFunc(&newBase, fileExtn)
             
-            renameFunc(&baseName)
-            
-            let replacementName = fileExtn != nil ? "\(baseName).\(fileExtn!)" : baseName
+            let replacementName = newBase.isEmpty ? fileName : "\(newBase).\(fileExtn)"
             if replacementName != fileName {
-                if !dryRun {
-                    try file.rename(to: replacementName)
+                if !dryRun && !tryOut {
+                    try file!.rename(to: replacementName)
                 }
                 nrenamed += 1
             }
+            
             reportAfter(index: i, original: fileName, replacement: replacementName)
         }
         return nrenamed
@@ -96,35 +93,46 @@ public struct RenameOptions: ParsableArguments {
     
     func reportBefore(index i: Int, path: String) {
         if verbose {
-            print("\(i). \(path)")
+            print("\(i). '\(path)'")
         }
     }
     
     func reportAfter(index i: Int, original: String, replacement: String) {
         if replacement != original {
             if verbose {
-                print("\(String(repeating: " ", count: "\(i)".count))  renamed to \(replacement)")
-            } else if !quiet {
+                print("\(String(repeating: " ", count: "\(i)".count))  renamed to '\(replacement)'")
+            } else if !quiet || tryOut || dryRun {
                 print("'\(original)' renamed to '\(replacement)'")
             }
         } else {
             if verbose {
                 print("\(String(repeating: " ", count: "\(i)".count))  not renamed")
-            } else if !quiet && dryRun {
+            } else if !quiet || tryOut || dryRun {
                 print("'\(original)' not renamed")
             }
         }
     }
     
-    func separateExtension(_ name: String) -> (base: String, extn: String?) {
-        var base = name
-        var extn: String? = nil
-        let components = name.split(separator: ".")
-        if let ext = components.last {
-            extn = String(ext)
-            base = components.dropLast().joined(separator: ".")
+    func separateFile(_ full: String) -> (path: String, file: String) {
+        var path = ""
+        var file = full
+        let components = full.split(separator: "/", omittingEmptySubsequences: false)
+        if components.count > 1 {
+            path = components.dropLast().joined(separator: "/")
+            file = String(components.last!)
         }
-        return (base, extn)
+        return (path, file) // to re-concatenate, path.isEmpty ? "\(path)/\(file)" : file
+    }
+    
+    func separateExtension(_ name: String) -> (base: String, extn: String) {
+        var base = name
+        var extn = ""
+        let components = name.split(separator: ".", omittingEmptySubsequences: false)
+        if components.count > 1, let e = components.last, e.count > 0 {
+            base = components.dropLast().joined(separator: ".")
+            extn = String(e)
+        }
+        return (base, extn) // to re-concatenate, extn.isEmpty ? "\(base).\(extn)" : base
     }
 }
 
